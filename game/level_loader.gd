@@ -24,7 +24,7 @@ static func load_levels() -> Dictionary:
 		if not FileAccess.file_exists(path):
 			Log.go_data("candidate not present: %s" % path)
 			continue
-		var raw := _read_json(path)
+		var raw: Variant = _read_json(path)
 		if raw == null:
 			continue
 		var check := LevelData.validate(raw)

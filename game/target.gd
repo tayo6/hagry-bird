@@ -12,7 +12,7 @@ const KINEMATIC_REST := RigidBody3D.FREEZE_KINEMATIC
 
 var points: int = GameSettings.target_points
 var destroy_threshold: float = 4.5
-var destroyed: bool = false
+var is_destroyed: bool = false
 var _fade_time: float = 0.0
 var _visual: MeshInstance3D = null
 var _inner: MeshInstance3D = null
@@ -40,9 +40,9 @@ static func create(parent: Node, position: Vector3, radius: float = 0.42, pts: i
 
 
 func try_destroy(reason: String) -> void:
-	if destroyed:
+	if is_destroyed:
 		return
-	destroyed = true
+	is_destroyed = true
 	Log.physics("target destroyed (%s) +%d pts" % [reason, points])
 	emit_signal("destroyed", self)
 	freeze_mode = KINEMATIC_REST
@@ -53,7 +53,7 @@ func try_destroy(reason: String) -> void:
 
 
 func settle_speed() -> float:
-	return 0.0 if destroyed else global_linear_velocity.length()
+	return 0.0 if is_destroyed else global_linear_velocity.length()
 
 
 func _physics_process(delta: float) -> void:
@@ -68,7 +68,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _on_body_entered(body: Node) -> void:
-	if destroyed:
+	if is_destroyed:
 		return
 	var rel := absf(global_linear_velocity.dot((body as RigidBody3D).global_linear_velocity)) \
 		if body is RigidBody3D else 0.0

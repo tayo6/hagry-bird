@@ -40,7 +40,13 @@ static func _validate_level(entry: Variant, index: int) -> String:
 	for field in REQUIRED_LEVEL_FIELDS:
 		if not entry.has(field):
 			return "%s: missing required field '%s'" % [prefix, field]
-	if typeof(entry["projectiles"]) != TYPE_INT or entry["projectiles"] < 1:
+	# NOTE: Godot's JSON parser returns every number as TYPE_FLOAT, so we
+	# accept int-or-float and require a whole value >= 1 (same semantics the
+	# Go validator enforces on its side).
+	var proj: Variant = entry["projectiles"]
+	if typeof(proj) != TYPE_INT and typeof(proj) != TYPE_FLOAT:
+		return "%s: 'projectiles' must be a number >= 1" % prefix
+	if float(proj) < 1.0 or float(proj) != float(int(proj)):
 		return "%s: 'projectiles' must be an int >= 1" % prefix
 	if typeof(entry["structures"]) != TYPE_ARRAY or typeof(entry["targets"]) != TYPE_ARRAY:
 		return "%s: 'structures'/'targets' must be arrays" % prefix

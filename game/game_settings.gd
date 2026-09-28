@@ -54,9 +54,29 @@ static func load_overrides() -> void:
 	if typeof(parsed) != TYPE_DICTIONARY:
 		push_warning("[BOOT] overrides file is not a JSON object: %s" % abs_path)
 		return
+	# NOTE: this runs as a *static* function, so instance-style setters like
+	# set() cannot be used; we assign each whitelisted static var explicitly.
+	var applied: int = 0
 	for key in parsed.keys():
-		if key in ["projectile_mass", "projectile_radius", "gravity_scale",
-				"restitution", "linear_damp", "launch_power", "max_drag_meters",
-				"default_projectile_count", "target_points", "settle_time_seconds"]:
-			set(key, parsed[key])
-	Log.boot("applied runtime overrides from %s (%d keys)" % [abs_path, parsed.size()])
+		match key:
+			"projectile_mass":
+				projectile_mass = float(parsed[key]); applied += 1
+			"projectile_radius":
+				projectile_radius = float(parsed[key]); applied += 1
+			"gravity_scale":
+				gravity_scale = float(parsed[key]); applied += 1
+			"restitution":
+				restitution = float(parsed[key]); applied += 1
+			"linear_damp":
+				linear_damp = float(parsed[key]); applied += 1
+			"launch_power":
+				launch_power = float(parsed[key]); applied += 1
+			"max_drag_meters":
+				max_drag_meters = float(parsed[key]); applied += 1
+			"default_projectile_count":
+				default_projectile_count = int(parsed[key]); applied += 1
+			"target_points":
+				target_points = int(parsed[key]); applied += 1
+			"settle_time_seconds":
+				settle_time_seconds = float(parsed[key]); applied += 1
+	Log.boot("applied runtime overrides from %s (%d keys)" % [abs_path, applied])

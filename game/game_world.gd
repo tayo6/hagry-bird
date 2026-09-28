@@ -130,7 +130,7 @@ func _everything_slow() -> bool:
 	for b in bodies:
 		if not is_instance_valid(b):
 			continue
-		if b is Target and (b as Target).destroyed:
+		if b is Target and (b as Target).is_destroyed:
 			continue
 		if b is Projectile and not (b as Projectile).in_flight:
 			continue
