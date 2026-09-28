@@ -26,8 +26,12 @@ var band_right: MeshInstance3D = null
 
 func _init(parent: Node, origin: Vector3) -> void:
 	node_3d = _build_visual()
+	# NOTE: `global_position` requires the node to already be inside the tree.
+	# The world root itself is only added to the scene later (GameWorld._init
+	# runs during Game.new(), before add_child), so use the local `position`
+	# here — the parent chain is at the origin anyway.
 	parent.add_child(node_3d)
-	node_3d.global_position = origin
+	node_3d.position = origin
 	cup_position = origin + CUP_OFFSET
 
 
@@ -86,8 +90,12 @@ func loaded_ball_position() -> Vector3:
 func refresh_bands(ball_pos: Vector3) -> void:
 	if band_left == null or node_3d == null:
 		return
-	var left_tip := node_3d.to_global(Vector3(-0.55, FORK_HEIGHT, 0.0))
-	var right_tip := node_3d.to_global(Vector3(0.55, FORK_HEIGHT, 0.0))
+	# to_global() requires the node to be inside the tree; during headless
+	# construction (GameWorld._init) it is not yet, so fall back to local
+	# coords (the world root chain is at the origin anyway).
+	var xform := node_3d.global_transform if node_3d.is_inside_tree() else Transform3D(Basis.IDENTITY, node_3d.position)
+	var left_tip := xform.origin + xform.basis.x * -0.55 + xform.basis.y * FORK_HEIGHT
+	var right_tip := xform.origin + xform.basis.x * 0.55 + xform.basis.y * FORK_HEIGHT
 	band_left.transform = _segment_transform(left_tip, ball_pos)
 	band_right.transform = _segment_transform(right_tip, ball_pos)
 
@@ -114,7 +122,7 @@ func _build_visual() -> Node3D:
 		var prong := MeshInstance3D.new()
 		prong.mesh = Theme3D.box(Vector3(0.16, 0.9, 0.16), Theme3D.FORK_POST)
 		prong.position = Vector3(0.34 * side, FORK_HEIGHT - 0.1, 0)
-		prong.rotation_z = deg_to_rad(-24.0 * side)
+		prong.rotation.z = deg_to_rad(-24.0 * side)  # Vector3 euler, not rotation_z
 		root.add_child(prong)
 
 	# elastic bands (unit-height Y cylinders stretched along segments)

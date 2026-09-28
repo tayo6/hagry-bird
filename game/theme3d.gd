@@ -76,7 +76,7 @@ static func sphere(radius: float, color: Color) -> SphereMesh:
 	var s := SphereMesh.new()
 	s.radius = radius
 	s.height = radius * 2.0
-	s.radial_steps = 16
+	s.radial_segments = 16  # Godot 4 property name (not radial_steps)
 	s.rings = 10
 	s.material = mat(color)
 	return s
