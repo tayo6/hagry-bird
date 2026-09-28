@@ -1,6 +1,1 @@
-# Godot Engine
-.godot/
-*.uid
-
-# Build artifacts (tools)
-tools/*/bin/
+(empty)

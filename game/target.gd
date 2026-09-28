@@ -8,7 +8,9 @@ class_name Target
 
 signal destroyed(target: Target)
 
-const KINEMATIC_REST := RigidBody3D.FREEZE_KINEMATIC
+# FreezeMode.KINEMATIC_FIXED (numeric: enum constants are not exposed
+	# to GDScript in all 4.x builds).
+const KINEMATIC_REST := 1
 
 var points: int = GameSettings.target_points
 var destroy_threshold: float = 4.5
@@ -23,7 +25,7 @@ func _ready() -> void:
 	collision_layer = 8   # targets
 	collision_mask = 1 | 2 | 4 | 8
 	can_sleep = true
-	material = _bounce_material()
+	physics_material_override = _bounce_material()
 	_build_shape()
 	_build_visual()
 	body_entered.connect(_on_body_entered)
@@ -53,7 +55,7 @@ func try_destroy(reason: String) -> void:
 
 
 func settle_speed() -> float:
-	return 0.0 if is_destroyed else global_linear_velocity.length()
+	return 0.0 if is_destroyed else linear_velocity.length()
 
 
 func _physics_process(delta: float) -> void:
@@ -70,10 +72,10 @@ func _physics_process(delta: float) -> void:
 func _on_body_entered(body: Node) -> void:
 	if is_destroyed:
 		return
-	var rel := absf(global_linear_velocity.dot((body as RigidBody3D).global_linear_velocity)) \
+	var rel := absf(linear_velocity.dot((body as RigidBody3D).linear_velocity)) \
 		if body is RigidBody3D else 0.0
 	if body is Projectile:
-		rel = body.global_linear_velocity.length()
+		rel = body.linear_velocity.length()
 	if rel >= destroy_threshold:
 		try_destroy("impact speed %.1f" % rel)
 

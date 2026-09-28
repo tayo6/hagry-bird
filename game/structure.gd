@@ -24,7 +24,7 @@ func _ready() -> void:
 	collision_mask = 1 | 2 | 4 | 8
 	can_sleep = true
 	continuous_cd = true
-	material = _physics_material(float(defs["friction"]), float(defs["restitution"]))
+	physics_material_override = _physics_material(float(defs["friction"]), float(defs["restitution"]))
 	_build_shape()
 	_build_visual(Color(defs["color"]))
 
@@ -41,7 +41,7 @@ static func create(parent: Node, kind: String, position: Vector3, size: Vector3)
 
 
 func settle_speed() -> float:
-	return global_linear_velocity.length()
+	return linear_velocity.length()
 
 
 func _build_shape() -> void:

@@ -1,6 +1,6 @@
 extends Node
 class_name AudioManager
-## Procedural sound effects via AudioStreamGenerator — zero audio assets.
+## Procedural sound effects rendered to PCM at runtime — zero audio assets.
 ##
 ## Web browsers require a user gesture before audio can start; we simply
 ## resume the mixer on the first touch/click, which is exactly when the
@@ -16,11 +16,10 @@ var _unlocked: bool = false
 func _ready() -> void:
 	for i in 6:
 		var p := AudioStreamPlayer.new()
-		p.stream = _make_generator_stream()
 		p.volume_db = -8.0
 		add_child(p)
 		_players.append(p)
-	Log.boot("audio: procedural generator ready (%d voices)" % _players.size())
+	Log.boot("audio: procedural PCM voices ready (%d)" % _players.size())
 
 
 func play_launch(power: float) -> void:
@@ -49,33 +48,28 @@ func unlock_from_gesture() -> void:
 		return
 	_unlocked = true
 	# On web this satisfies the autoplay policy; harmless elsewhere.
-	AudioServer.is_bus_active(0)
+	# Resume the mixer by toggling pause on the Master bus (index 0).
+	AudioServer.set_bus_mute(0, false)
 
 
 # --- internals ---------------------------------------------------------------
-
-func _make_generator_stream() -> AudioStreamGenerator:
-	var s := AudioStreamGenerator.new()
-	s.mix_rate = SAMPLE_RATE
-	s.set_buffering_msec(80.0)
-	return s
-
 
 func _play_tone(freq: float, duration: float, kind: String, volume: float) -> void:
 	if _players.is_empty():
 		return
 	var p: AudioStreamPlayer = _players[_idx]
 	_idx = (_idx + 1) % _players.size()
-	if not p.playing:
-		p.play()
-	var gen := p.get_stream_player()
 	var frames := int(SAMPLE_RATE * duration)
-	if gen == null or frames <= 0:
+	if frames <= 0:
 		return
-	gen.set_mix_enable(false)
+	# Render the whole tone into an AudioStreamWAV and play it through the
+	# shared AudioStreamPlayer. This avoids AudioStreamGeneratorPlayback,
+	# whose API surface differs between Godot builds and breaks static
+	# analysis / headless exports.
+	var pcm := AudioStreamWAV.new()
+	var data := PackedByteArray()
+	data.resize(frames * 4)  # 32-bit float mono
 	for i in frames:
-		if not gen.has_available_frames():
-			await get_tree().process_frame
 		var t := float(i) / SAMPLE_RATE
 		var env := 1.0 - float(i) / float(frames)
 		var sample := 0.0
@@ -88,8 +82,17 @@ func _play_tone(freq: float, duration: float, kind: String, volume: float) -> vo
 			"pop_up":
 				var f2 := freq * (1.0 + 0.8 * float(i) / float(frames))
 				sample = sin(TAU * f2 * t)
-		gen.push_sample(sample * env * volume * 0.5)
-	gen.set_mix_enable(true)
+		data.encode_float(i * 4, clampf(sample * env * volume * 0.5, -1.0, 1.0))
+	# FORMAT_FLOAT == 5 in Godot 4.x (32-bit float PCM); numeric to stay
+	# compatible with builds that do not expose the enum as GDScript constants.
+	pcm.format = 5
+	pcm.mix_rate = int(SAMPLE_RATE)
+	pcm.loop_mode = 0
+	pcm.data = data
+	if p.playing:
+		p.stop()
+	p.stream = pcm
+	p.play()
 
 
 func _play_arpeggio(freqs: Array) -> void:

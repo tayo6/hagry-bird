@@ -136,7 +136,7 @@ func _everything_slow() -> bool:
 			continue
 		if b is RigidBody3D and b.freeze:
 			continue
-		if b.get_global_linear_velocity().length() > GameSettings.settle_speed_threshold:
+		if b.get_linear_velocity().length() > GameSettings.settle_speed_threshold:
 			return false
 	return true
 
@@ -193,7 +193,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	audio.unlock_from_gesture()
 	if pressed:
-		var wp := _pointer_world(pos as Vector2)
+		var wp: Vector3 = _pointer_world(pos as Vector2)
 		if wp != null and wp.distance_to(current_ball.global_position) <= maxf(current_ball.radius * 3.0, 1.4):
 			launcher.begin_drag()
 			get_viewport().set_input_as_handled()
@@ -202,7 +202,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			launcher.end_drag()
 			trajectory.hide()
 		else:
-			var wp2 := _pointer_world(pos as Vector2)
+			var wp2: Vector3 = _pointer_world(pos as Vector2)
 			if wp2 != null:
 				launcher.update_drag(wp2)
 				var ball_pos := launcher.loaded_ball_position()
