@@ -45,7 +45,10 @@ func _init(parent: Node) -> void:
 
 	banner = Label.new()
 	banner.name = "Banner"
-	banner.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# Verified against Godot 4.7.2 Label properties: horizontal_alignment /
+	# vertical_alignment (singular). `alignment` does not exist on Label
+	# (it belongs to TextEdit/LineEdit) and caused a hard SCRIPT ERROR.
+	banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	banner.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	banner.set_anchors_preset(Control.PRESET_FULL_RECT)
 	banner.add_theme_font_size_override("font_size", 56)

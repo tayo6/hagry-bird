@@ -22,7 +22,6 @@ func _ready() -> void:
 	gravity_scale = GameSettings.gravity_scale
 	linear_damp = GameSettings.linear_damp
 	can_sleep = true
-	bounce_combined_mode = COMBINE_MODE_MULTIPLY
 	var pm := PhysicsMaterial.new()
 	pm.bounce = GameSettings.restitution
 	pm.friction = 0.6
@@ -76,8 +75,7 @@ func out_of_bounds() -> bool:
 
 
 func _physics_process(_delta: float) -> void:
-	if in_flight and not rest_reported and not sleep_state == RigidBody3D.STATE_SLEEPING:
-		pass  # rest detection is centralised in GameWorld.settle logic
+	pass  # rest detection is centralised in GameWorld.settle logic
 
 
 func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:

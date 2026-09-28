@@ -74,8 +74,18 @@ func _apply_instant() -> void:
 func _required_zoom() -> float:
 	## Pull back enough that the whole play field fits horizontally for the
 	## current viewport aspect (responsive on phones in landscape/portrait).
-	var vp := get_viewport().get_visible_rect().size
-	var aspect: float = vp.x / maxf(vp.y, 1.0)
+	# NOTE: this class extends Node (not Node3D), so get_viewport() is only
+	# valid once the node is in the tree; fall back to the root window size.
+	var vp_size := Vector2.ZERO
+	var vp := get_viewport()
+	if vp != null:
+		vp_size = vp.get_visible_rect().size
+	if vp_size == Vector2.ZERO:
+		var win_size := DisplayServer.window_get_size()
+		vp_size = Vector2(win_size.x, win_size.y)
+	if vp_size.x <= 0.0 or vp_size.y <= 0.0:
+		vp_size = Vector2(1280.0, 720.0)  # headless-safe fallback
+	var aspect: float = vp_size.x / maxf(vp_size.y, 1.0)
 	var fov_h_est: float = deg_to_rad(camera.fov) * maxf(aspect, 0.75)
 	var need: float = (_frame_half_width + 2.0) / tan(fov_h_est * 0.5)
 	return clampf(maxf(need, 14.0), 12.0, 46.0)

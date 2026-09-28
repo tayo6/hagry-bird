@@ -76,7 +76,7 @@ static func sphere(radius: float, color: Color) -> SphereMesh:
 	var s := SphereMesh.new()
 	s.radius = radius
 	s.height = radius * 2.0
-	s.radial_steps = 16
+	s.radial_segments = 16  # Godot 4 property name (not radial_steps)
 	s.rings = 10
 	s.material = mat(color)
 	return s
@@ -128,6 +128,6 @@ static func build_sun() -> DirectionalLight3D:
 	sun.light_energy = 1.25
 	sun.light_color = Color(1.0, 0.96, 0.88)
 	sun.shadow_enabled = true
-	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL_SPLIT_PANES
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
 	sun.directional_shadow_max_distance = 60.0
 	return sun

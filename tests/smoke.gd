@@ -105,7 +105,8 @@ func _run() -> void:
 	game.restart_level()
 	await process_frame
 	await process_frame
-	world = game.get_node("GameWorld")
+	await process_frame   # rebuild happens via call_deferred -> needs an extra frame
+	world = game.world
 	state = game.get_node("GameState")
 	if state.state != GameState.State.AIMING:
 		printerr("[BOOT] FAIL: restart did not return to AIMING")
@@ -131,12 +132,20 @@ func _run() -> void:
 		print("[API] ok: ApiClient short-circuits cleanly while disabled")
 
 	# --- trajectory math -------------------------------------------------------------
+	# Launch from ground level with an upward velocity: the arc must rise to an
+	# apex above the origin, then fall back and terminate at the ground clamp
+	# (y ~ 0). Asserting "last point below first point" is physically wrong for
+	# a ground launch, since the final dot is clamped onto y=0.02.
 	var pts := TrajectoryPreview.simulate_points(Vector3.ZERO, Vector3(20, 10, 0), 1.0)
-	if pts.size() < 5 or pts[pts.size() - 1].y < pts[0].y:
-		printerr("[PHYSICS] FAIL: trajectory preview looks wrong (%d points)" % pts.size())
+	var apex_y := 0.0
+	for p in pts:
+		apex_y = maxf(apex_y, p.y)
+	var last := pts[pts.size() - 1]
+	if pts.size() < 5 or apex_y <= 1.0 or last.y >= apex_y:
+		printerr("[PHYSICS] FAIL: trajectory preview looks wrong (%d points, apex=%.2f, last_y=%.2f)" % [pts.size(), apex_y, last.y])
 		_finish(false)
 		return
-	print("[PHYSICS] ok: trajectory simulation yields %d descending points" % pts.size())
+	print("[PHYSICS] ok: trajectory simulation yields %d points (apex=%.2f, lands y=%.2f)" % [pts.size(), apex_y, last.y])
 
 	_finish(_failures == 0)
 

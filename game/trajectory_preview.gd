@@ -26,7 +26,7 @@ func _init(parent: Node) -> void:
 	_sphere = SphereMesh.new()
 	_sphere.radius = DOT_RADIUS
 	_sphere.height = DOT_RADIUS * 2.0
-	_sphere.radial_steps = 6
+	_sphere.radial_segments = 6  # Godot 4 property name (not radial_steps)
 	_sphere.rings = 4
 	_mesh_instance.material_override = _material
 	parent.add_child(_mesh_instance)
