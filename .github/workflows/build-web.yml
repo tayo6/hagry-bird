@@ -77,7 +77,8 @@ jobs:
           mkdir -p ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
           unzip -q tpz.tpz -d tpl
           cp -r tpl/templates/* ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable/
-          ls ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable | grep web_no_thread_release >/dev/null
+          # Preset uses thread_support=false -> Godot requires the *_nothreads_* template.
+          ls ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable | grep web_nothreads_release >/dev/null
           echo "[EXPORT] web templates installed"
 
       - name: Static project validation (files + res:// references)
