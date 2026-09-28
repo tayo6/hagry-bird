@@ -22,12 +22,13 @@ func _ready() -> void:
 	gravity_scale = GameSettings.gravity_scale
 	linear_damp = GameSettings.linear_damp
 	can_sleep = true
-	contact_monitor = true
-	max_contacts_reported = 6
-	continue_pushing_static_bodies = true
+	bounce_combined_mode = COMBINE_MODE_MULTIPLY
+	var pm := PhysicsMaterial.new()
+	pm.bounce = GameSettings.restitution
+	pm.friction = 0.6
+	material = pm
 	collision_layer = 2   # projectiles
-	collision_mask = 4 | 8  # structures + targets (+ ground handled below)
-	# Ground is layer 1; include it so the ball can roll on it.
+	# Layers: 1 ground, 2 projectiles, 4 structures, 8 targets.
 	collision_mask = 1 | 4 | 8
 	body_entered.connect(_on_body_entered)
 	_rebuild_shape()

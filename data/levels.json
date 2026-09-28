@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "generator": "hand-authored source (consumed by tools/levelgen)",
+    "version": 1,
+    "generated_at": ""
+  },
+  "levels": [
+    {
+      "id": "level_1",
+      "name": "First Tower",
+      "projectiles": 3,
+      "launcher": { "position": [-8, 0, 0] },
+      "structures": [
+        { "kind": "wood",  "position": [6, 0, 0],     "size": [0.5, 2.4, 0.5] },
+        { "kind": "wood",  "position": [9, 0, 0],     "size": [0.5, 2.4, 0.5] },
+        { "kind": "glass", "position": [7.5, 2.4, 0], "size": [4.0, 0.35, 0.9] },
+        { "kind": "wood",  "position": [7.5, 2.75, 0],"size": [0.5, 1.6, 0.5] }
+      ],
+      "targets": [
+        { "position": [6, 2.9, 0],   "points": 100 },
+        { "position": [7.5, 0.55, 0],"points": 100 },
+        { "position": [9, 2.9, 0],   "points": 100 }
+      ]
+    }
+  ]
+}

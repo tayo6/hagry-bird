@@ -44,7 +44,7 @@ func follow(body: RigidBody3D) -> void:
 	Log.input_ev("camera: following projectile")
 
 
-def unfollow() -> void:
+func unfollow() -> void:
 	_follow_body = null
 
 
