@@ -128,6 +128,6 @@ static func build_sun() -> DirectionalLight3D:
 	sun.light_energy = 1.25
 	sun.light_color = Color(1.0, 0.96, 0.88)
 	sun.shadow_enabled = true
-	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL_SPLIT_PANES
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
 	sun.directional_shadow_max_distance = 60.0
 	return sun
