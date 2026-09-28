@@ -1,0 +1,11 @@
+[gd_scene load_steps=2 format=3]
+
+; Bootstrap scene for SHAPESHOT.
+; Intentionally minimal: the whole game world (camera, light, environment,
+; ground, slingshot, structures, targets, HUD) is built at runtime by
+; bootstrap.gd. Nothing here requires the Godot editor.
+
+[ext_resource type="Script" path="res://game/bootstrap.gd" id="1_bootstrap"]
+
+[node name="Main" type="Node"]
+script = ExtResource("1_bootstrap")

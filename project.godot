@@ -1,0 +1,52 @@
+; Engine configuration file.
+; SHAPESHOT - a code-first 3D physics slingshot prototype.
+; This file is written by hand (no editor involved). It is the only place
+; where engine-level settings live, so the whole project can be built
+; headlessly with: godot --headless --path . --export-release "Web" build/web/index.html
+
+config_version=5
+
+[application]
+
+config/name="Shapeshot"
+config/description="Code-first 3D physics slingshot prototype (Godot 4.7.2)."
+config/version="1.0.0"
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.7")
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=4
+
+[file_customization]
+
+folder_colors={
+"res://game/": "purple",
+"res://ui/": "cyan",
+"res://data/": "green",
+"res://generated/": "green",
+"res://tools/": "yellow",
+"res://tests/": "red"
+}
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+
+[physics]
+
+3d/default_gravity=18.0
+common/physics_ticks_per_second=60
+
+[rendering]
+
+; Compatibility renderer => WebGL2, required for the HTML5/Web export.
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+anti_aliasing/quality.msaa_3d="2x"
+environment/defaults/default_clear_color=Color(0.43, 0.68, 0.86, 1)
+textures/canvas_textures/default_texture_filter=1
