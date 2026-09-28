@@ -25,6 +25,7 @@ var current_ball: Projectile = null
 var _world_root: Node3D = null
 var _settle_timer: float = 0.0
 var _settling: bool = false
+var _build_pending: bool = false
 
 
 func _init(parent: Node, p_level: Level, p_state: GameState, p_audio: AudioManager) -> void:
@@ -46,6 +47,21 @@ func _init(parent: Node, p_level: Level, p_state: GameState, p_audio: AudioManag
 	trajectory = TrajectoryPreview.new(_world_root)
 	camera_ctrl = CameraController.new(self)
 
+	# Defer all global-position writes to _ready: GameWorld._init runs while the
+	# node is still outside the scene tree (Game.new()), and setting
+	# global_position on a detached Node3D spams engine errors and can abort
+	# bootstrap. By _ready time the whole chain is in the tree.
+	_build_pending = true
+
+
+func _ready() -> void:
+	if _build_pending:
+		_build_pending = false
+		_populate_world()
+
+
+func _populate_world() -> void:
+	launcher.on_tree_entered()
 	var built := level.build(_world_root)
 	for s in built["structures"]:
 		bodies.append(s)
@@ -57,9 +73,17 @@ func _init(parent: Node, p_level: Level, p_state: GameState, p_audio: AudioManag
 	var b := level.bounds()
 	camera_ctrl.frame_level(level.launcher_position, b["center_x"], b["span_x"])
 	Log.boot("world ready: %d rigid bodies, %d targets" % [bodies.size(), targets_alive.size()])
+	# world.start() may have been called before the node entered the tree;
+	# arm the first projectile now that global positions are safe.
+	if state != null and state.state == GameState.State.AIMING and current_ball == null:
+		_arm_next_projectile()
 
 
 func start() -> void:
+	if _build_pending:
+		# GameWorld.new() was followed immediately by start() before the node
+		# entered the tree; _ready() will arm the first projectile instead.
+		return
 	_arm_next_projectile()
 
 

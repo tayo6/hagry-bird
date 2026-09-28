@@ -105,7 +105,8 @@ func _run() -> void:
 	game.restart_level()
 	await process_frame
 	await process_frame
-	world = game.get_node("GameWorld")
+	await process_frame   # rebuild happens via call_deferred -> needs an extra frame
+	world = game.world
 	state = game.get_node("GameState")
 	if state.state != GameState.State.AIMING:
 		printerr("[BOOT] FAIL: restart did not return to AIMING")

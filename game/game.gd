@@ -53,7 +53,8 @@ func _load_current_level() -> void:
 	world = GameWorld.new(self, lvl, state, audio)
 	world.name = "GameWorld"
 	state.begin_level(lvl.targets.size(), lvl.projectile_count)
-	world.start()
+	add_child(world)   # _ready populates targets/projectile once in the tree
+	world.start()      # no-op while population is pending; safe either way
 	Log.boot("game running: level %d/%d" % [_level_index + 1, _levels.size()])
 
 
@@ -79,5 +80,8 @@ func debug_finish_shot(win: bool) -> void:
 	if win:
 		for t in world.targets_alive.duplicate():
 			t.try_destroy("debug")
-	state.projectiles_remaining = 1
+	else:
+		# Lose path: drain all remaining ammo so _on_shot_over cannot arm a
+		# fresh projectile and flip back to AIMING.
+		state.projectiles_remaining = 0
 	world._on_shot_over()

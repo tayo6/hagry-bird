@@ -26,13 +26,16 @@ var band_right: MeshInstance3D = null
 
 func _init(parent: Node, origin: Vector3) -> void:
 	node_3d = _build_visual()
-	# NOTE: `global_position` requires the node to already be inside the tree.
-	# The world root itself is only added to the scene later (GameWorld._init
-	# runs during Game.new(), before add_child), so use the local `position`
-	# here — the parent chain is at the origin anyway.
 	parent.add_child(node_3d)
 	node_3d.position = origin
 	cup_position = origin + CUP_OFFSET
+
+
+## Called by GameWorld once the world root is inside the scene tree, so band
+## anchors can safely resolve through global_transform.
+func on_tree_entered() -> void:
+	if node_3d != null:
+		cup_position = node_3d.global_transform * CUP_OFFSET
 
 
 static func pull_to_velocity(pull: Vector3) -> Vector3:
