@@ -11,6 +11,11 @@ class_name ApiClient
 ## is empty (default), every call short-circuits and everything keeps working
 ## fully offline. This class exists so leaderboards/cloud-save/downloadable
 ## levels can be added later without touching game code.
+##
+## Concurrency safety: each request gets its OWN HTTPRequest node, and the
+## request's purpose ("health" / "levels" / "score") is bound into that node's
+## completion callback via a lambda closure. There is no shared mutable
+## "_last_purpose" field, so overlapping requests can never corrupt routing.
 
 signal health_checked(ok: bool, detail: String)
 signal levels_fetched(levels: Array, error: String)
@@ -18,7 +23,6 @@ signal score_submitted(ok: bool, error: String)
 
 var base_url: String = ""
 var player_id: String = "guest"
-var _http: HTTPRequest = null
 
 
 func _ready() -> void:
@@ -37,14 +41,14 @@ func check_health() -> void:
 	if not is_enabled():
 		emit_signal("health_checked", false, "disabled")
 		return
-	_request(base_url.path_join("api/health"), HTTPClient.METHOD_GET)
+	_request("health", base_url.path_join("api/health"), HTTPClient.METHOD_GET)
 
 
 func fetch_levels() -> void:
 	if not is_enabled():
 		emit_signal("levels_fetched", [], "disabled")
 		return
-	_request(base_url.path_join("api/levels"), HTTPClient.METHOD_GET)
+	_request("levels", base_url.path_join("api/levels"), HTTPClient.METHOD_GET)
 
 
 func submit_score(level_id: String, score: int, win: bool) -> void:
@@ -55,22 +59,47 @@ func submit_score(level_id: String, score: int, win: bool) -> void:
 		"player_id": player_id, "level_id": level_id,
 		"score": score, "win": win,
 	})
-	_request(base_url.path_join("api/score"), HTTPClient.METHOD_POST,
+	_request("score", base_url.path_join("api/score"), HTTPClient.METHOD_POST,
 		["Content-Type: application/json"], body)
 
 
 # --- internals ---------------------------------------------------------------
 
-func _request(url: String, method: int, headers: PackedStringArray = PackedStringArray(), body: String = "") -> void:
-	if _http == null:
-		_http = HTTPRequest.new()
-		_http.use_threads = false if _is_web() else true
-		add_child(_http)
-		_http.request_completed.connect(_on_completed)
-	Log.api("request %s %s" % [HTTPRequest.get_method_string(method) if false else _method_name(method), url])
-	var err := _http.request(url, headers, method, body)
+## Spawns a dedicated one-shot HTTPRequest node per call. The `purpose` string
+## is captured by the lambda below, so completion routing is per-request and
+## immune to concurrent calls.
+func _request(purpose: String, url: String, method: int,
+		headers: PackedStringArray = PackedStringArray(), body: String = "") -> void:
+	var http := HTTPRequest.new()
+	http.use_threads = false if _is_web() else true
+	add_child(http)
+	http.request_completed.connect(
+		func(result: int, status: int, _resp_headers: PackedStringArray, bytes: PackedByteArray) -> void:
+			_on_completed(purpose, result, status, bytes)
+			http.queue_free()
+	)
+	Log.api("request %s %s" % [_method_name(method), url])
+	var err := http.request(url, headers, method, body)
 	if err != OK:
-		_on_completed(err, -1, PackedStringArray(), PackedByteArray())
+		# Immediate failure: synthesize a completion so callers always get a signal.
+		_on_completed(purpose, HTTPRequest.RESULT_CANT_CONNECT, -1, PackedByteArray())
+		http.queue_free()
+
+
+func _on_completed(purpose: String, result: int, status: int, bytes: PackedByteArray) -> void:
+	var ok := result == HTTPRequest.RESULT_SUCCESS and status >= 200 and status < 300
+	var text := bytes.get_string_from_utf8()
+	if not ok:
+		Log.api("request failed (result=%d http=%d) — game continues offline" % [result, status])
+	match purpose:
+		"levels":
+			var parsed: Variant = JSON.parse_string(text) if ok else null
+			var arr: Array = parsed.get("levels", []) if typeof(parsed) == TYPE_DICTIONARY else []
+			emit_signal("levels_fetched", arr, "" if ok else "unavailable")
+		"score":
+			emit_signal("score_submitted", ok, "" if ok else "unavailable")
+		_:
+			emit_signal("health_checked", ok, text.left(120))
 
 
 func _is_web() -> bool:
@@ -84,21 +113,3 @@ func _method_name(m: int) -> String:
 		HTTPClient.METHOD_GET: return "GET"
 		HTTPClient.METHOD_POST: return "POST"
 	return "?"
-
-
-var _last_purpose: String = ""
-
-func _on_completed(result: int, status: int, _headers: PackedStringArray, bytes: PackedByteArray) -> void:
-	var ok := result == HTTPRequest.RESULT_SUCCESS and status >= 200 and status < 300
-	var text := bytes.get_string_from_utf8()
-	if not ok:
-		Log.api("request failed (result=%d http=%d) — game continues offline" % [result, status])
-	if _last_purpose == "levels":
-		var parsed: Variant = JSON.parse_string(text) if ok else null
-		var arr: Array = parsed.get("levels", []) if typeof(parsed) == TYPE_DICTIONARY else []
-		emit_signal("levels_fetched", arr, "" if ok else "unavailable")
-	elif _last_purpose == "score":
-		emit_signal("score_submitted", ok, "" if ok else "unavailable")
-	else:
-		emit_signal("health_checked", ok, text.left(120))
-	_last_purpose = ""

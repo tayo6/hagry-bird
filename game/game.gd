@@ -70,3 +70,14 @@ func _rebuild_after_clear() -> void:
 	if _levels.is_empty():
 		return
 	_load_current_level()
+
+
+## Test hook used by tests/smoke.gd (headless): deterministically resolves the
+## current shot without waiting for real physics to settle. `win` destroys all
+## targets; otherwise the remaining ammo is drained and the shot ends.
+func debug_finish_shot(win: bool) -> void:
+	if win:
+		for t in world.targets_alive.duplicate():
+			t.try_destroy("debug")
+	state.projectiles_remaining = 1
+	world._on_shot_over()

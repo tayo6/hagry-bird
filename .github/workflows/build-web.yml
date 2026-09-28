@@ -1,0 +1,131 @@
+name: Build & Deploy Web
+
+# Full pipeline, no Godot editor and no local tooling required:
+#   Go vet/test -> build levelgen -> generate+validate level JSON
+#   -> headless Godot import -> smoke test -> Web export
+#   -> artifact upload -> GitHub Pages deploy.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: "4.7.2"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # --- Go: data pipeline -------------------------------------------------
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Go vet
+        run: go vet ./...
+        working-directory: tools/levelgen
+
+      - name: Go tests
+        run: go test -v ./...
+        working-directory: tools/levelgen
+
+      - name: Build level generator
+        run: go build -o bin/levelgen .
+        working-directory: tools/levelgen
+
+      - name: Generate level data (Go -> generated/levels.json)
+        run: ./tools/levelgen/bin/levelgen generate -in data/levels.json -out generated/levels.json
+
+      - name: Validate generated level data
+        run: ./tools/levelgen/bin/levelgen validate -in generated/levels.json
+
+      - name: Verify generated JSON is parseable and non-empty
+        run: |
+          test -s generated/levels.json
+          python3 -c "import json;d=json.load(open('generated/levels.json'));assert d['levels'], 'empty levels';print('[GO DATA] OK:',len(d['levels']),'level(s)')"
+
+      # --- Godot: headless validation + export -------------------------------
+      - name: Install Godot ${{ env.GODOT_VERSION }} (headless Linux binary)
+        run: |
+          set -euo pipefail
+          cd /tmp
+          curl -fsSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip
+          sudo install Godot_v${GODOT_VERSION}-stable_linux.x86_64 /usr/local/bin/godot
+          rm -f godot.zip Godot_v${GODOT_VERSION}-stable_linux.x86_64
+          godot --version
+
+      - name: Install Web export templates
+        run: |
+          set -euo pipefail
+          cd /tmp
+          curl -fsSL -o tpz.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          mkdir -p ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          unzip -q tpz.tpz -d tpl
+          cp -r tpl/templates/* ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable/
+          ls ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable | grep web_no_thread_release >/dev/null
+          echo "[EXPORT] web templates installed"
+
+      - name: Static project validation (files + res:// references)
+        run: ./scripts/validate.sh
+
+      - name: Headless Godot import (project must open without the editor)
+        run: timeout 300 godot --headless --path . --import
+
+      - name: Headless smoke test (game logic under real engine)
+        run: timeout 300 godot --headless --path . --script tests/smoke.gd
+
+      - name: Export Web build -> build/web/
+        run: |
+          set -euo pipefail
+          mkdir -p build/web
+          timeout 600 godot --headless --path . --export-release "Web" build/web/index.html
+
+      - name: Verify export artifacts (index.html / .wasm / .pck)
+        run: |
+          set -euo pipefail
+          test -f build/web/index.html   || { echo "[EXPORT] MISSING index.html"; exit 1; }
+          ls build/web/*.wasm >/dev/null || { echo "[EXPORT] MISSING *.wasm"; exit 1; }
+          ls build/web/*.pck  >/dev/null || { echo "[EXPORT] MISSING *.pck"; exit 1; }
+          echo "[EXPORT] artifacts:"; ls -la build/web
+
+      - name: Upload web build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shapeshot-web
+          path: build/web
+          retention-days: 14
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  deploy:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
