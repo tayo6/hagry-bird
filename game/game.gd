@@ -33,6 +33,7 @@ func _ready() -> void:
 
 	hud = Hud.new(self)
 	hud.name = "Hud"
+	add_child(hud)
 	hud.bind(state)
 	hud.restart_button.pressed.connect(restart_level)
 	hud.sound_toggle.toggled.connect(
